@@ -7,3 +7,10 @@ The labels for the reviews are 1 or -1 (representing positive or negative).
 - Implement and compare three types of linear classifiers: the perceptron algorithm, the average perceptron algorithm, and the Pegasos algorithm.
 - Apply the classifiers on the food dataset.
 - Experiment with additional features and explore their impact on classifier performance.
+
+## Folder
+- `project1.py`: functions that design the learning algorithms
+- `main.py`: where functions are called and run experiments
+- `utils.py`: helper functions provided
+- `test.py`: testing/debugging the functions implemented
+- data files are in .tsv format
