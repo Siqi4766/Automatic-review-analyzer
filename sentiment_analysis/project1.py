@@ -1,18 +1,16 @@
 from string import punctuation, digits
 import numpy as np
 import random
-
-
+from pathlib import Path
 
 #==============================================================================
 #===  PART I  =================================================================
 #==============================================================================
 
-
-
 def get_order(n_samples):
     try:
-        with open(str(n_samples) + '.txt') as fp:
+        order_path = Path(__file__).resolve().parent / (str(n_samples) + '.txt')
+        with open(order_path) as fp:
             line = fp.readline()
             return list(map(int, line.split(',')))
     except FileNotFoundError:
@@ -38,8 +36,12 @@ def hinge_loss_single(feature_vector, label, theta, theta_0):
         the hinge loss, as a float, associated with the given data point and
         parameters.
     """
-    # Your code here
-    raise NotImplementedError
+    y = theta @ feature_vector + theta_0
+    if y * label >= 1:
+        loss = 0
+    else:
+        loss = 1 - y * label
+    return loss
 
 
 
@@ -59,11 +61,7 @@ def hinge_loss_full(feature_matrix, labels, theta, theta_0):
         the hinge loss, as a float, associated with the given dataset and
         parameters.  This number should be the average hinge loss across all of
     """
-
-    # Your code here
-    raise NotImplementedError
-
-
+    return np.mean([hinge_loss_single(feature_vector, label, theta, theta_0) for (feature_vector, label) in zip(feature_matrix, labels)])    
 
 
 def perceptron_single_step_update(
@@ -87,18 +85,16 @@ def perceptron_single_step_update(
         the updated feature-coefficient parameter `theta` as a numpy array
         the updated offset parameter `theta_0` as a floating point number
     """
-    # Your code here
-    raise NotImplementedError
-
-
+    y = current_theta @ feature_vector + current_theta_0
+    if y * label <= 1e-6:
+        return current_theta + label * feature_vector, current_theta_0 + label
+    else:
+        return current_theta, current_theta_0
 
 def perceptron(feature_matrix, labels, T):
     """
     Runs the full perceptron algorithm on a given set of data. Runs T
     iterations through the data set: we do not stop early.
-
-    NOTE: Please use the previously implemented functions when applicable.
-    Do not copy paste code from previous parts.
 
     Args:
         `feature_matrix` - numpy matrix describing the given data. Each row
@@ -114,15 +110,15 @@ def perceptron(feature_matrix, labels, T):
         the offset parameter `theta_0` as a floating point number
             (found also after T iterations through the feature matrix).
     """
-    # Your code here
-    raise NotImplementedError
+    nsamples, nfeatures = feature_matrix.shape
+    theta = np.zeros(nfeatures)
+    theta_0 = 0
     for t in range(T):
         for i in get_order(nsamples):
-            # Your code here
-            raise NotImplementedError
-    # Your code here
-    raise NotImplementedError
-
+            theta, theta_0 = perceptron_single_step_update(feature_matrix[i], labels[i], theta, theta_0)
+            
+    return theta, theta_0
+    
 
 
 def average_perceptron(feature_matrix, labels, T):
@@ -130,12 +126,6 @@ def average_perceptron(feature_matrix, labels, T):
     Runs the average perceptron algorithm on a given dataset.  Runs `T`
     iterations through the dataset (we do not stop early) and therefore
     averages over `T` many parameter values.
-
-    NOTE: Please use the previously implemented functions when applicable.
-    Do not copy paste code from previous parts.
-
-    NOTE: It is more difficult to keep a running average than to sum and
-    divide.
 
     Args:
         `feature_matrix` -  A numpy matrix describing the given data. Each row
@@ -151,8 +141,17 @@ def average_perceptron(feature_matrix, labels, T):
         the average offset parameter `theta_0` as a floating point number
             (averaged also over T iterations through the feature matrix).
     """
-    # Your code here
-    raise NotImplementedError
+    nsamples, nfeatures = feature_matrix.shape
+    theta = np.zeros(nfeatures)
+    theta_sum = np.zeros(nfeatures)
+    theta_0 = 0
+    theta_0_sum = 0
+    for _ in range(T):
+        for i in get_order(nsamples):
+            theta, theta_0 = perceptron_single_step_update(feature_matrix[i], labels[i], theta, theta_0)
+            theta_sum += theta
+            theta_0_sum += theta_0
+    return theta_sum / (nsamples * T), theta_0_sum / (nsamples * T)
 
 
 def pegasos_single_step_update(
@@ -182,9 +181,14 @@ def pegasos_single_step_update(
         real valued number with the value of theta_0 after the old updated has
         completed.
     """
-    # Your code here
-    raise NotImplementedError
-
+    condition = label * (feature_vector @ theta + theta_0)
+    if condition <= 1:
+        theta = (1-eta*L) * theta + eta * label * feature_vector
+        theta_0 = theta_0 + eta * label
+    else:
+        theta = (1-eta*L) * theta
+        theta_0 = theta_0
+    return theta, theta_0
 
 
 def pegasos(feature_matrix, labels, T, L):
@@ -193,9 +197,6 @@ def pegasos(feature_matrix, labels, T, L):
     through the data set, there is no need to worry about stopping early.  For
     each update, set learning rate = 1/sqrt(t), where t is a counter for the
     number of updates performed so far (between 1 and nT inclusive).
-
-    NOTE: Please use the previously implemented functions when applicable.  Do
-    not copy paste code from previous parts.
 
     Args:
         `feature_matrix` - A numpy matrix describing the given data. Each row
@@ -214,9 +215,17 @@ def pegasos(feature_matrix, labels, T, L):
         the value of the theta_0, the offset classification parameter, found
         after T iterations through the feature matrix.
     """
-    # Your code here
-    raise NotImplementedError
-
+    nsamples, nfeatures = feature_matrix.shape
+    theta = np.zeros(nfeatures)
+    theta_0 = 0
+    counter = 0
+    for t in range(T):
+        for i in get_order(nsamples):
+            counter += 1
+            eta = 1.0 / np.sqrt(counter)
+            theta, theta_0 = pegasos_single_step_update(feature_matrix[i], labels[i], L, eta, theta, theta_0)
+    
+    return theta, theta_0
 
 
 #==============================================================================
@@ -226,12 +235,11 @@ def pegasos(feature_matrix, labels, T, L):
 
 
 ##  #pragma: coderesponse template
-##  def decision_function(feature_vector, theta, theta_0):
-##      return np.dot(theta, feature_vector) + theta_0
-##  def classify_vector(feature_vector, theta, theta_0):
-##      return 2*np.heaviside(decision_function(feature_vector, theta, theta_0), 0)-1
+def decision_function(feature_vector, theta, theta_0):
+    return np.dot(theta, feature_vector) + theta_0
+def classify_vector(feature_vector, theta, theta_0):
+    return 2*np.heaviside(decision_function(feature_vector, theta, theta_0), 0)-1
 ##  #pragma: coderesponse end
-
 
 
 def classify(feature_matrix, theta, theta_0):
@@ -251,9 +259,14 @@ def classify(feature_matrix, theta, theta_0):
         given theta and theta_0. If a prediction is GREATER THAN zero, it
         should be considered a positive classification.
     """
-    # Your code here
-    raise NotImplementedError
+    return np.array([classify_vector(v, theta, theta_0) for v in feature_matrix])
 
+def accuracy(preds, targets):
+    """
+    Given length-N vectors containing predicted and target labels,
+    returns the fraction of predictions that are correct.
+    """
+    return (preds == targets).mean()
 
 def classifier_accuracy(
         classifier,
@@ -288,9 +301,12 @@ def classifier_accuracy(
         trained classifier on the training data and the second element is the
         accuracy of the trained classifier on the validation data.
     """
-    # Your code here
-    raise NotImplementedError
-
+    theta, theta_0 = classifier(train_feature_matrix, train_labels, **kwargs)
+    train_predictions = classify(train_feature_matrix, theta, theta_0)
+    val_predictions = classify(val_feature_matrix, theta, theta_0)
+    train_accuracy = accuracy(train_predictions, train_labels)
+    validation_accuracy = accuracy(val_predictions, val_labels)
+    return train_accuracy, validation_accuracy
 
 
 def extract_words(text):
@@ -302,42 +318,39 @@ def extract_words(text):
         a list of lowercased words in the string, where punctuation and digits
         count as their own words.
     """
-    # Your code here
-    raise NotImplementedError
-
     for c in punctuation + digits:
         text = text.replace(c, ' ' + c + ' ')
     return text.lower().split()
 
 
-
 def bag_of_words(texts, remove_stopword=False):
     """
-    NOTE: feel free to change this code as guided by Section 3 (e.g. remove
-    stopwords, add bigrams etc.)
-
     Args:
         `texts` - a list of natural language strings.
     Returns:
         a dictionary that maps each word appearing in `texts` to a unique
         integer `index`.
     """
-    # Your code here
-    raise NotImplementedError
-    
-    indices_by_word = {}  # maps word to unique index
+    stopwords = set()
+    if remove_stopword:
+        stopwords_path = Path(__file__).resolve().parent / 'stopwords.txt'
+        with open(stopwords_path) as stopword_file:
+            stopwords = {word.strip() for word in stopword_file}
+
+    indices_by_word = {}
     for text in texts:
         word_list = extract_words(text)
         for word in word_list:
-            if word in indices_by_word: continue
-            if word in stopword: continue
+            if word in indices_by_word:
+                continue
+            if word in stopwords:
+                continue
             indices_by_word[word] = len(indices_by_word)
 
     return indices_by_word
 
 
-
-def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
+def extract_bow_feature_vectors(reviews, indices_by_word, binarize=False):
     """
     Args:
         `reviews` - a list of natural language strings
@@ -347,7 +360,6 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
         matrix thus has shape (n, m), where n counts reviews and m counts words
         in the dictionary.
     """
-    # Your code here
     feature_matrix = np.zeros([len(reviews), len(indices_by_word)], dtype=np.float64)
     for i, text in enumerate(reviews):
         word_list = extract_words(text)
@@ -355,15 +367,5 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
             if word not in indices_by_word: continue
             feature_matrix[i, indices_by_word[word]] += 1
     if binarize:
-        # Your code here
-        raise NotImplementedError
+        feature_matrix[feature_matrix > 0] = 1
     return feature_matrix
-
-
-
-def accuracy(preds, targets):
-    """
-    Given length-N vectors containing predicted and target labels,
-    returns the fraction of predictions that are correct.
-    """
-    return (preds == targets).mean()
