@@ -1,4 +1,4 @@
-# Automatic-review-analyzer
+# Automatic review analyzer
 This project designs a linear classifier to use for sentiment analysis of product reviews, trained by reviews written by Amazon customers for food products. This is part of the [MITx 6.86x ML course](https://www.edx.org/learn/machine-learning/massachusetts-institute-of-technology-machine-learning-with-python-from-linear-models-to-deep-learning).
 
 ## Pipeline
